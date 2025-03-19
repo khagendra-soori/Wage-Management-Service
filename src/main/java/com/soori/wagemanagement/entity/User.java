@@ -3,6 +3,7 @@ package com.soori.wagemanagement.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -37,6 +38,6 @@ public class User {
     @JoinColumn(name = "department_id")
     private Department department;
 
-    @OneToMany(mappedBy = "user",cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Role> roles;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Role> roles = new ArrayList<>();
 }

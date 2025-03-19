@@ -1,7 +1,9 @@
 package com.soori.wagemanagement.service;
 
 import com.soori.wagemanagement.dto.UserDto;
+import com.soori.wagemanagement.entity.Role;
 import com.soori.wagemanagement.entity.User;
+import com.soori.wagemanagement.repository.DepartmentRepository;
 import com.soori.wagemanagement.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,9 @@ public class UserServiceImpl implements UserService{
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private DepartmentRepository departmentRepository;
 
     @Override
     public List<UserDto> getAllUsers() {
@@ -73,8 +78,8 @@ public class UserServiceImpl implements UserService{
                 .email(user.getEmail())
                 .userImage(user.getUserImage())
                 .lineManager(user.getLineManager())
-                .departmentId(user.getDepartment().getDepartmentId())
-                .roleIds(user.getRoles().stream().map(role -> role.getRoleId()).collect(Collectors.toList()))
+                .departmentId(user.getDepartment() != null ? user.getDepartment().getDepartmentId() : null)
+                .roleIds(user.getRoles() != null ? user.getRoles().stream().map(Role::getRoleId).collect(Collectors.toList()) : new ArrayList<>())
                 .build();
     }
 
@@ -84,6 +89,7 @@ public class UserServiceImpl implements UserService{
                 .email(userDTO.getEmail())
                 .userImage(userDTO.getUserImage())
                 .lineManager(userDTO.getLineManager())
+                .department(userDTO.getDepartmentId() != null ? departmentRepository.findById(userDTO.getDepartmentId()).orElse(null) : null)
                 .phoneNumber(userDTO.getPhoneNumber())
                 .build();
     }

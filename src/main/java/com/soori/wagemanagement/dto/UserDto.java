@@ -1,5 +1,6 @@
 package com.soori.wagemanagement.dto;
 
+import com.soori.wagemanagement.entity.Department;
 import lombok.*;
 
 import java.util.List;
