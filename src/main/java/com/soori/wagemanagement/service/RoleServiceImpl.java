@@ -3,6 +3,7 @@ package com.soori.wagemanagement.service;
 import com.soori.wagemanagement.dto.RoleDto;
 import com.soori.wagemanagement.entity.Role;
 import com.soori.wagemanagement.repository.RoleRepository;
+import com.soori.wagemanagement.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,9 @@ public class RoleServiceImpl implements RoleService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Override
     public List<RoleDto> getAllaRoles() {
@@ -78,6 +82,7 @@ public class RoleServiceImpl implements RoleService {
         return Role.builder()
                 .roleId(roleDto.getRoleId())
                 .roleName(roleDto.getRoleName())
+                .user(roleDto.getUserId() != null ? userRepository.findById(roleDto.getUserId()).orElse(null) : null)
                 .build();
     }
 

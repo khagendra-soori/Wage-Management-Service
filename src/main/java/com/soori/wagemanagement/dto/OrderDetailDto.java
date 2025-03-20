@@ -14,5 +14,5 @@ import java.util.List;
 public class OrderDetailDto {
     private Integer quantity;
     private Double rate;
-    private List<ItemRegistration> itemNumber;
+    private List<Long> itemIds;
 }

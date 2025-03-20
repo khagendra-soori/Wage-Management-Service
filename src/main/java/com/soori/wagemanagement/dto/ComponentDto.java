@@ -8,6 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class ComponentDto {
+    private Long componentId;
     private String componentName;
     private Double rate;
     private Integer unit;

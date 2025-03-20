@@ -3,6 +3,7 @@ package com.soori.wagemanagement.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -27,5 +28,6 @@ public class OrderDetail {
 
     // Use the correct field name "orderDetail" from ItemRegistration
     @OneToMany(mappedBy = "orderDetail", cascade = CascadeType.ALL)
-    private List<ItemRegistration> items;  // Renamed 'item' to 'items' for clarity
+    private List<ItemRegistration> items = new ArrayList<>();
+
 }
