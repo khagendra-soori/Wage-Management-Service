@@ -2,15 +2,15 @@ package com.soori.wagemanagement.dto;
 
 import lombok.*;
 
-import java.util.List;
-
 @Getter
 @Setter
+@Builder
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class JobMasterDto {
+public class JobMasterResponseDto {
+    private String jobMasterId;
     private String clientName;
     private String address;
-    private Long orderDetailId;
+    private OrderDetailResponseDto orderDetail; //Nested DTO for order detail
 }

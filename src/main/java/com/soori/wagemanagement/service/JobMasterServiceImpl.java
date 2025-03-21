@@ -1,8 +1,6 @@
 package com.soori.wagemanagement.service;
 
-import com.soori.wagemanagement.dto.ComponentDto;
-import com.soori.wagemanagement.dto.JobMasterDto;
-import com.soori.wagemanagement.entity.Component;
+import com.soori.wagemanagement.dto.*;
 import com.soori.wagemanagement.entity.ItemRegistration;
 import com.soori.wagemanagement.entity.JobMaster;
 import com.soori.wagemanagement.entity.OrderDetail;
@@ -15,11 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
-public class JobMasterServiceImpl implements JobMasterService{
+public class JobMasterServiceImpl implements JobMasterService {
 
     @Autowired
     private ItemRegistrationRepository itemRegistrationRepository;
@@ -36,6 +33,63 @@ public class JobMasterServiceImpl implements JobMasterService{
 
     @Override
     @Transactional
+    public JobMasterResponseDto createJobMaster(JobMasterDto jobMasterDto) {
+        //Fetch the other details
+        OrderDetail orderDetail = orderDetailRepository.findById(jobMasterDto.getOrderDetailId())
+                .orElseThrow(() -> new RuntimeException("OrderDetail not found with id: " + jobMasterDto.getOrderDetailId()));
+
+        //Create and associate JobMaster
+        JobMaster jobMaster = JobMaster.builder()
+                .clientName(jobMasterDto.getClientName())
+                .address(jobMasterDto.getAddress())
+                .orderDetail(orderDetail) //associate order detail
+                .build();
+
+        JobMaster savedJobMaster = jobMasterRepository.save(jobMaster);
+        return mapToJobMasterResponseDto(savedJobMaster);
+
+    }
+
+    private JobMasterResponseDto mapToJobMasterResponseDto(JobMaster jobMaster) {
+        JobMasterResponseDto dto = new JobMasterResponseDto();
+        dto.setJobMasterId(jobMaster.getJobMasterId());
+        dto.setClientName(jobMaster.getClientName());
+        dto.setAddress(jobMaster.getAddress());
+
+        //Convert OrderDetail to DTO
+        if (jobMaster.getOrderDetail() != null) {
+            dto.setOrderDetail(mapToOrderDetailResponseDto(jobMaster.getOrderDetail()));
+        } else {
+            dto.setOrderDetail(null);
+        }
+
+        return dto;
+    }
+
+    private OrderDetailResponseDto mapToOrderDetailResponseDto(OrderDetail orderDetail) {
+        OrderDetailResponseDto dto = new OrderDetailResponseDto();
+        dto.setDetailId(orderDetail.getDetailId());
+        dto.setQuantity(orderDetail.getQuantity());
+        dto.setRate(orderDetail.getRate());
+
+        //Prevent NullPointerException for items list
+        if (orderDetail.getItems() != null) {
+            dto.setItems(orderDetail.getItems().stream().map(this::mapToItemDto).collect(Collectors.toList()));
+        } else {
+            dto.setItems(new ArrayList<>());
+        }
+
+        return dto;
+    }
+
+    private ItemDto mapToItemDto(ItemRegistration itemRegistration) {
+        ItemDto dto = new ItemDto();
+        dto.setItemId(itemRegistration.getItemRegistrationId());
+        dto.setItemName(itemRegistration.getItemName());
+        return dto;
+    }
+
+    /*
     public JobMasterDto placeOrder(JobMaster jobMaster) {
         OrderDetail orderDetail = jobMaster.getOrderDetail();
         List<ItemRegistration> items = orderDetail.getItems();
@@ -71,6 +125,9 @@ public class JobMasterServiceImpl implements JobMasterService{
         return mapToJobMasterDto(savedJobMaster);
 
     }
+    */
+
+    /*
 
     //Check if all component have sufficient quantity available
     private void checkComponentAvailability(List<Component> components, Integer orderQuantity) {
@@ -113,9 +170,8 @@ public class JobMasterServiceImpl implements JobMasterService{
         }
 
         return JobMasterDto.builder()
-                .jobMasterId(jobMaster.getJobMasterId())
                 .clientName(jobMaster.getClientName())
-                .items(itemDetailsDTOs)
+                .items(jobMaster.getComponents().get().setComponentId())
                 .totalAmount(totalPrice)
                 .build();
     }
@@ -129,6 +185,6 @@ public class JobMasterServiceImpl implements JobMasterService{
         return mapToJobMasterDto(jobMaster.get());
     }
 
-
-
+    }
+     */
 }

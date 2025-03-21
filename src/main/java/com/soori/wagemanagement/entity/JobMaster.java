@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.extern.apachecommons.CommonsLog;
 import org.hibernate.annotations.GenericGenerator;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -17,8 +18,8 @@ import java.util.List;
 public class JobMaster {
     @Id
     @GenericGenerator(name = "job_master_id", strategy = "com.soori.wagemanagement.utils.JobMasterIdGenerator")
-    @GeneratedValue(generator = "job_master_id", strategy = GenerationType.IDENTITY)
-    @Column(name = "job_master_id")
+    @GeneratedValue(generator = "job_master_id")
+    @Column(name = "job_master_id", updatable = false, nullable = false)
     private String jobMasterId;
 
     @Column(name = "client_name")
@@ -26,9 +27,6 @@ public class JobMaster {
 
     @Column(name = "address")
     private String address;
-
-    @OneToMany
-    private List<Component> components;
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "detail_id")
