@@ -12,5 +12,6 @@ import java.util.List;
 public class JobMasterDto {
     private String clientName;
     private String address;
-    private Long orderDetailId;
+    private Integer quantity;
+    private List<Long> itemIds;
 }

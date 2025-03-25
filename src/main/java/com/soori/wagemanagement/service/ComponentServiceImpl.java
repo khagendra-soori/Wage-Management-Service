@@ -58,7 +58,6 @@ public class ComponentServiceImpl implements ComponentService{
     private ComponentDto mapToComponentDto(Component component) {
         return ComponentDto.builder()
                 .componentName(component.getComponentName())
-                .rate(component.getRate())
                 .unit(component.getUnit())
                 .build();
     }
@@ -66,14 +65,12 @@ public class ComponentServiceImpl implements ComponentService{
     private Component mapToComponentEntity(ComponentDto componentDto ) {
         return Component.builder()
                 .componentName(componentDto.getComponentName())
-                .rate(componentDto.getRate())
                 .unit(componentDto.getUnit())
                 .build();
     }
 
     private void updateExistingComponent(Component existingComponent,ComponentDto componentDto){
         existingComponent.setComponentName(componentDto.getComponentName());
-        existingComponent.setRate(componentDto.getRate());
         existingComponent.setUnit(componentDto.getUnit());
     }
 

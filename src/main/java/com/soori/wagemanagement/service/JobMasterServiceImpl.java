@@ -1,18 +1,18 @@
 package com.soori.wagemanagement.service;
 
 import com.soori.wagemanagement.dto.*;
+import com.soori.wagemanagement.entity.Component;
 import com.soori.wagemanagement.entity.ItemRegistration;
 import com.soori.wagemanagement.entity.JobMaster;
-import com.soori.wagemanagement.entity.OrderDetail;
 import com.soori.wagemanagement.repository.ComponentRepository;
 import com.soori.wagemanagement.repository.ItemRegistrationRepository;
 import com.soori.wagemanagement.repository.JobMasterRepository;
-import com.soori.wagemanagement.repository.OrderDetailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,169 +22,158 @@ public class JobMasterServiceImpl implements JobMasterService {
     private ItemRegistrationRepository itemRegistrationRepository;
 
     @Autowired
-    private ComponentRepository componentRepository;
-
-    @Autowired
-    private OrderDetailRepository orderDetailRepository;
-
-    @Autowired
     private JobMasterRepository jobMasterRepository;
 
+    @Autowired
+    private ComponentRepository componentRepository;
 
     @Override
     @Transactional
     public JobMasterResponseDto createJobMaster(JobMasterDto jobMasterDto) {
-        //Fetch the other details
-        OrderDetail orderDetail = orderDetailRepository.findById(jobMasterDto.getOrderDetailId())
-                .orElseThrow(() -> new RuntimeException("OrderDetail not found with id: " + jobMasterDto.getOrderDetailId()));
+        //1. Fetch items from the database
+        List<ItemRegistration> items = fetchItems(jobMasterDto.getItemIds());
 
-        //Create and associate JobMaster
-        JobMaster jobMaster = JobMaster.builder()
+        //2. Calculate the total price for the order
+        Double totalPrice = calculateTotalPrice(items, jobMasterDto.getQuantity());
+
+        //3. Reduce the stock for each component in the items
+        reduceComponentStock(items, jobMasterDto.getQuantity());
+
+        //4. Create and save the JobMaster order
+        JobMaster jobMaster = buildJobMaster(jobMasterDto, items, totalPrice);
+        JobMaster savedJobMaster = jobMasterRepository.save(jobMaster);
+
+        //5. Map the saved order to a response DTO and return it
+        return mapToJobMasterResponseDto(savedJobMaster);
+    }
+
+    @Override
+    public JobMasterResponseDto getJobMasterDetails(String jobMasterId, String clientName, String orderId) {
+        JobMaster jobMaster = findJobMaster(jobMasterId,clientName,orderId);
+        return mapToJobMasterResponseDto(jobMaster);
+    }
+
+    private JobMaster findJobMaster(String jobMasterId, String clientName, String orderId) {
+        if (jobMasterId != null) {
+            return jobMasterRepository.findByJobMasterId(jobMasterId).orElseThrow(
+                    () -> new RuntimeException("JobMaster not found with id: " + jobMasterId)
+            );
+        }else if (clientName != null) {
+            return jobMasterRepository.findByClientName(clientName).orElseThrow(
+                    () -> new RuntimeException("Client not found with name: " + clientName)
+            );
+        }
+        else if (orderId != null) {
+            return jobMasterRepository.findByOrderId(orderId).orElseThrow(
+                    () -> new RuntimeException("Order not found with id: " + orderId)
+            );
+        }
+
+        throw new RuntimeException("Invalid Parameter");
+    }
+
+    @Override
+    @Transactional
+    public JobMasterResponseDto updateJobMaster(String jobMasterId, JobMasterDto updatedJobMasterDto) {
+        JobMaster existingJobMaster = jobMasterRepository.findByJobMasterId(jobMasterId).orElseThrow(
+                () -> new RuntimeException("JobMaster not found with id: " + jobMasterId)
+        );
+
+        //Update only allowed field
+        if(updatedJobMasterDto.getClientName() != null){
+            existingJobMaster.setClientName(updatedJobMasterDto.getClientName());
+        }
+        if (updatedJobMasterDto.getAddress() != null) {
+            existingJobMaster.setAddress(updatedJobMasterDto.getAddress());
+        }
+        if (updatedJobMasterDto.getQuantity() != null && updatedJobMasterDto.getQuantity() > 0) {
+            existingJobMaster.setQuantity(updatedJobMasterDto.getQuantity());
+        }
+
+        JobMaster updatedJobMaster = jobMasterRepository.save(existingJobMaster);
+        return mapToJobMasterResponseDto(updatedJobMaster);
+    }
+
+    @Override
+    @Transactional
+    public void deleteJobMaster(String jobMasterId) {
+        JobMaster jobMaster = jobMasterRepository.findByJobMasterId(jobMasterId).orElseThrow(
+                () -> new RuntimeException("JobMaster not found with id: " + jobMasterId)
+        );
+        jobMasterRepository.delete(jobMaster);
+    }
+
+
+    private List<ItemRegistration> fetchItems(List<Long> itemIds){
+        List<ItemRegistration> items = itemRegistrationRepository.findAllById(itemIds);
+        if(items.isEmpty()){
+            throw new RuntimeException("No items found");
+        }
+        return items;
+    }
+
+    private Double calculateTotalPrice(List<ItemRegistration> items, int quantity){
+        double totalPrice = 0.0;
+        for (ItemRegistration item : items) {
+            if(item.getRate() != null){
+                totalPrice += item.getRate();
+            }
+        }
+        return totalPrice * quantity;
+    }
+
+    private void reduceComponentStock(List<ItemRegistration> items, int orderQuantity){
+        for (ItemRegistration item : items) {
+            for (Component component : item.getComponents()) {
+                if (component.getUnit() < orderQuantity) {
+                    throw new RuntimeException("Component "+component.getComponentName()+" not enough");
+                }
+
+                //Reduce stock and save component update
+                component.setUnit(component.getUnit()-orderQuantity);
+                componentRepository.save(component);
+            }
+        }
+    }
+
+    private JobMaster buildJobMaster(JobMasterDto jobMasterDto, List<ItemRegistration> items, Double totalPrice) {
+        return JobMaster.builder()
                 .clientName(jobMasterDto.getClientName())
                 .address(jobMasterDto.getAddress())
-                .orderDetail(orderDetail) //associate order detail
+                .quantity(jobMasterDto.getQuantity())
+                .totalPrice(totalPrice)
+                .items(items)
                 .build();
-
-        JobMaster savedJobMaster = jobMasterRepository.save(jobMaster);
-        return mapToJobMasterResponseDto(savedJobMaster);
-
     }
 
-    private JobMasterResponseDto mapToJobMasterResponseDto(JobMaster jobMaster) {
-        JobMasterResponseDto dto = new JobMasterResponseDto();
-        dto.setJobMasterId(jobMaster.getJobMasterId());
-        dto.setClientName(jobMaster.getClientName());
-        dto.setAddress(jobMaster.getAddress());
+    private JobMasterResponseDto mapToJobMasterResponseDto(JobMaster jobMaster){
+        //Map ItemRegistration to their Response DTO
+        List<ItemRegistrationResponseDto> itemDtos = jobMaster.getItems().stream()
+                .map(item -> new ItemRegistrationResponseDto(
+                        item.getItemRegistrationId(),
+                        item.getItemName(),
+                        item.getRate(),
+                        mapComponentsToDto(item.getComponents())
+                )).collect(Collectors.toList());
 
-        //Convert OrderDetail to DTO
-        if (jobMaster.getOrderDetail() != null) {
-            dto.setOrderDetail(mapToOrderDetailResponseDto(jobMaster.getOrderDetail()));
-        } else {
-            dto.setOrderDetail(null);
-        }
-
-        return dto;
-    }
-
-    private OrderDetailResponseDto mapToOrderDetailResponseDto(OrderDetail orderDetail) {
-        OrderDetailResponseDto dto = new OrderDetailResponseDto();
-        dto.setDetailId(orderDetail.getDetailId());
-        dto.setQuantity(orderDetail.getQuantity());
-        dto.setRate(orderDetail.getRate());
-
-        //Prevent NullPointerException for items list
-        if (orderDetail.getItems() != null) {
-            dto.setItems(orderDetail.getItems().stream().map(this::mapToItemDto).collect(Collectors.toList()));
-        } else {
-            dto.setItems(new ArrayList<>());
-        }
-
-        return dto;
-    }
-
-    private ItemDto mapToItemDto(ItemRegistration itemRegistration) {
-        ItemDto dto = new ItemDto();
-        dto.setItemId(itemRegistration.getItemRegistrationId());
-        dto.setItemName(itemRegistration.getItemName());
-        return dto;
-    }
-
-    /*
-    public JobMasterDto placeOrder(JobMaster jobMaster) {
-        OrderDetail orderDetail = jobMaster.getOrderDetail();
-        List<ItemRegistration> items = orderDetail.getItems();
-
-        if (items == null || items.isEmpty()) {
-            throw new IllegalArgumentException("Order detail items is empty");
-        }
-
-        //Validate that all items exist and have sufficient quantity
-        for (ItemRegistration item : items) {
-            Optional<ItemRegistration> existingItem = itemRegistrationRepository.findById(item.getItemRegistrationId());
-
-            if(!existingItem.isPresent()) {
-                throw new IllegalArgumentException("Item not found with id " + item.getItemRegistrationId());
-            }
-
-            //Check component inventory
-            ItemRegistration registeredItem = existingItem.get();
-            checkComponentAvailability(registeredItem.getComponents(),orderDetail.getQuantity());
-        }
-
-        //After validation, update component quantities
-        for (ItemRegistration item : items) {
-            ItemRegistration registeredItem = itemRegistrationRepository.findById(item.getItemRegistrationId()).get();
-            updateComponentQuantities(registeredItem.getComponents(),orderDetail.getQuantity());
-        }
-
-        //Save the order and the job master
-        OrderDetail savedOrderDetail = orderDetailRepository.save(orderDetail);
-        jobMaster.setOrderDetail(savedOrderDetail);
-        JobMaster savedJobMaster = jobMasterRepository.save(jobMaster);
-
-        return mapToJobMasterDto(savedJobMaster);
-
-    }
-    */
-
-    /*
-
-    //Check if all component have sufficient quantity available
-    private void checkComponentAvailability(List<Component> components, Integer orderQuantity) {
-        for(Component component : components) {
-            Component currentComponent = componentRepository.findById(component.getComponentId()).get();
-
-            if(currentComponent.getUnit() < orderQuantity) {
-                throw new IllegalArgumentException("Insufficient component.");
-            }
-        }
-    }
-
-    //Update component quantities based on order
-    private void updateComponentQuantities(List<Component> components, Integer orderQuantity) {
-        for (Component component : components) {
-            Component currentComponent = componentRepository.findById(component.getComponentId()).get();
-            currentComponent.setUnit(currentComponent.getUnit() - orderQuantity);
-            componentRepository.save(currentComponent);
-        }
-    }
-
-    private JobMasterDto mapToJobMasterDto(JobMaster jobMaster) {
-        OrderDetail orderDetail = jobMaster.getOrderDetail();
-        List<ItemRegistration> items = orderDetail.getItems();
-
-        List<ComponentDto> itemDetailsDTOs = new ArrayList<>();
-        Double totalPrice = 0.0;
-
-        for (ItemRegistration item : items) {
-            Double itemTotal = orderDetail.getQuantity() * orderDetail.getRate();
-            totalPrice += itemTotal;
-
-            ComponentDto itemDetailsDTO = ComponentDto.builder()
-                    .componentName(item.getItemName())
-                    .unit(orderDetail.getQuantity())
-                    .rate(orderDetail.getRate())
-                    .build();
-
-            itemDetailsDTOs.add(itemDetailsDTO);
-        }
-
-        return JobMasterDto.builder()
+        return JobMasterResponseDto.builder()
+                .jobMasterId(jobMaster.getJobMasterId())
+                .orderId(jobMaster.getOrderId())
                 .clientName(jobMaster.getClientName())
-                .items(jobMaster.getComponents().get().setComponentId())
-                .totalAmount(totalPrice)
+                .address(jobMaster.getAddress())
+                .quantity(jobMaster.getQuantity())
+                .totalPrice(jobMaster.getTotalPrice())
+                .items(itemDtos)
                 .build();
     }
 
-
-    //Get order details by job master ID
-    @Override
-    public JobMasterDto getOrderDetails(String jobMasterId) {
-        Optional<JobMaster> jobMaster = jobMasterRepository.findById(jobMasterId);
-
-        return mapToJobMasterDto(jobMaster.get());
+    private List<ComponentDto> mapComponentsToDto(List<Component> components){
+        return components.stream()
+                .map(component -> new ComponentDto(
+                        component.getComponentId(),
+                        component.getComponentName(),
+                        null
+                )).collect(Collectors.toList());
     }
 
-    }
-     */
 }

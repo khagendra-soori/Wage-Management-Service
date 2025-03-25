@@ -10,6 +10,6 @@ import lombok.*;
 public class ComponentDto {
     private Long componentId;
     private String componentName;
-    private Double rate;
+//    private Double rate;
     private Integer unit;
 }

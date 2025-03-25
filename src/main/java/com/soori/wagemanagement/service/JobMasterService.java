@@ -6,5 +6,8 @@ import com.soori.wagemanagement.entity.JobMaster;
 
 public interface JobMasterService {
     public JobMasterResponseDto createJobMaster(JobMasterDto jobMasterDto);
-   // public JobMasterDto getOrderDetails(String jobMasterId);
+    public JobMasterResponseDto getJobMasterDetails(String jobMasterId, String clientName, String orderId);
+    public JobMasterResponseDto updateJobMaster(String jobMasterId, JobMasterDto updatedJobMasterDto);
+    public void deleteJobMaster(String jobMasterId);
+
 }

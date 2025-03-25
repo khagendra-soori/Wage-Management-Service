@@ -23,13 +23,15 @@ public class ItemRegistration {
     @Column(name = "item_name")
     private String itemName;
 
-    @OneToMany(mappedBy = "itemRegistration",cascade = {CascadeType.PERSIST, CascadeType.MERGE},
-    orphanRemoval = true)
-    private List<Component> components = new ArrayList<>();
+    @Column(name = "rate")
+    private Double rate;
 
-    // This is the correct mapping back to OrderDetail
-    @ManyToOne
-    @JoinColumn(name = "detail_id") // This will create a foreign key column in the item_registrations table
-    private OrderDetail orderDetail;
+    @ManyToMany
+    @JoinTable(
+            name = "item_components",
+            joinColumns = @JoinColumn(name = "item_registeration_id"),
+            inverseJoinColumns = @JoinColumn(name = "component_id")
+    )
+    private List<Component> components = new ArrayList<>();
 
 }

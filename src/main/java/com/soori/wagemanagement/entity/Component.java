@@ -2,6 +2,8 @@ package com.soori.wagemanagement.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+//Will have the record of the component available after being placed.
+
 
 @Entity
 @Table(name = "components")
@@ -19,9 +21,8 @@ public class Component {
 
     @Column(name = "component_name")
     private String componentName;
-
-    @Column(name = "rate")
-    private Double rate;
+//    @Column(name = "rate")
+//    private Double rate;
 
     @Column(name = "unit")
     private Integer unit;

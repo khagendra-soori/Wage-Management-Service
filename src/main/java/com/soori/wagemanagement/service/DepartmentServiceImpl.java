@@ -71,7 +71,6 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     private Department mapToDepartmentEntity(DepartmentDto departmentDto){
         return Department.builder()
-                .departmentId(departmentDto.getDepartmentId())
                 .departmentName(departmentDto.getDepartmentName())
                 .build();
     }
